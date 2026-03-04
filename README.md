@@ -15,7 +15,7 @@ This repo supports both:
 ### 1) Clone
 
 ```bash
-git clone <YOUR_REPO_URL>
+git clone https://github.com/sidd-bme/cell-segmentation-counting-pipeline
 cd cellpose_segmentation
 ```
 
