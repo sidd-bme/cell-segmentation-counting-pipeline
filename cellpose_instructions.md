@@ -70,7 +70,7 @@ bash scripts/run_pipeline.sh
 
 `*_dP_cp_masks.tif` files are removed automatically.
 
-## F) Batch counting in Fiji from flows (optional)
+## F) Batch counting in Fiji from flows
 
 In Fiji:
 1. `Plugins -> Macros -> Run...`
