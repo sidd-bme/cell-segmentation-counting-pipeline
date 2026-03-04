@@ -35,8 +35,6 @@ OUTPUT_DIR=/absolute/path/to/output_folder \
 bash scripts/run_pipeline.sh
 ```
 
-That is the main command for most users.
-
 ## Default segmentation values (current tuned defaults)
 
 - `MODEL=cpsam`
@@ -132,15 +130,15 @@ In Fiji GUI:
 
 The macro runs: 8-bit -> auto-threshold -> convert mask -> analyze particles.
 
-## Copy outputs to external drive (run on your Mac)
+## Copy outputs to external drive
 
 ```bash
 rsync -avh --progress \
   <nus_user>@<vanda_login_host>:/home/svu/<nus_user>/cellpose_segmentation/img_cellpose_output/ \
-  "/Volumes/ext/J/cell_seg/"
+  "<copy path>"
 ```
 
-Use the same Vanda login hostname you use for SSH (not internal node names like `stdct-login-01`).
+Use the same Vanda login hostname used for SSH.
 
 ## Credits and Attribution
 
