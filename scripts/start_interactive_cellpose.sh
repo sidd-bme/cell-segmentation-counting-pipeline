@@ -32,5 +32,5 @@ After the interactive shell starts, run:
   cd ${REPO_DIR}
   source ~/miniconda3/etc/profile.d/conda.sh
   conda activate ${CELLPOSE_ENV}
-  INPUT_DIR=${INPUT_DIR} OUTPUT_DIR=${OUTPUT_DIR} bash scripts/run_pipeline_interactive_gpu.sh
+  INPUT_DIR=${INPUT_DIR} OUTPUT_DIR=${OUTPUT_DIR} USE_GPU=1 bash scripts/run_pipeline.sh
 EOF

@@ -1,28 +1,24 @@
-# Simple Step-by-Step: Vanda Interactive Workflow
+# Simple Step-by-Step (HPC + Local)
 
-Use this guide if you are starting from scratch.
-
-## Step 1: go to project folder (login node)
+## A) Clone and setup (one-time)
 
 ```bash
-cd /home/svu/e1520578/cellpose_segmentation
-```
-
-## Step 2: create Cellpose environment (one-time)
-
-```bash
+git clone <YOUR_REPO_URL>
+cd cellpose_segmentation
 bash scripts/setup_cellpose_env.sh
 ```
 
-## Step 3: request interactive GPU node
+This installs everything needed (Miniconda + Python dependencies) if missing.
+
+## B) Run on NUS Vanda interactive GPU
+
+### 1) On login node
 
 ```bash
 bash scripts/request_interactive_gpu.sh
 ```
 
-Wait until you land on a compute node shell.
-
-## Step 4: run segmentation + counting (interactive node)
+### 2) On interactive compute node
 
 ```bash
 cd /home/svu/e1520578/cellpose_segmentation
@@ -31,56 +27,54 @@ conda activate cellpose-sam
 
 INPUT_DIR=/home/svu/e1520578/cellpose_segmentation/img \
 OUTPUT_DIR=/home/svu/e1520578/cellpose_segmentation/img_cellpose_output \
-bash scripts/run_pipeline_interactive_gpu.sh
+USE_GPU=1 \
+bash scripts/run_pipeline.sh
 ```
 
-Default run values:
-- `MAX_DIM=1000`
-- `DIAMETER=35`
-- `FLOW_THRESHOLD=0.4`
-- `CELLPROB_THRESHOLD=0`
-- `MIN_SIZE=20`
-- `NITER=250`
-- `NORM_PERCENTILE=1:99`
-
-## Step 5: tune thresholds (optional)
+## C) Run locally (Mac/Linux)
 
 ```bash
-INPUT_DIR=/home/svu/e1520578/cellpose_segmentation/img \
-OUTPUT_DIR=/home/svu/e1520578/cellpose_segmentation/img_cellpose_output \
-FLOW_THRESHOLD=0.3 \
-CELLPROB_THRESHOLD=-1 \
-DIAMETER=30 \
-NITER=300 \
-bash scripts/run_pipeline_interactive_gpu.sh
+INPUT_DIR=/absolute/path/to/input_images \
+OUTPUT_DIR=/absolute/path/to/output_folder \
+USE_GPU=0 \
+bash scripts/run_pipeline.sh
 ```
 
-## Step 6: find outputs
+If local NVIDIA GPU exists:
 
-- Label masks: `img_cellpose_output/masks/*_cp_masks.tif`
-- Outlines: `img_cellpose_output/outlines/*_outlines_cp_masks.png`
-- Flows: `img_cellpose_output/flows/*_flows_cp_masks.tif`
-- Label-mask counts CSV: `img_cellpose_output/counts_from_labels.csv`
+```bash
+INPUT_DIR=/absolute/path/to/input_images \
+OUTPUT_DIR=/absolute/path/to/output_folder \
+USE_GPU=auto \
+bash scripts/run_pipeline.sh
+```
 
-Note: `*_dP_cp_masks.tif` files are removed automatically.
+## D) Tune thresholds
 
-## Step 7: batch counting in Fiji from flows (optional)
+```bash
+INPUT_DIR=/absolute/path/to/input_images \
+OUTPUT_DIR=/absolute/path/to/output_folder \
+FLOW_THRESHOLD=0.4 \
+CELLPROB_THRESHOLD=0 \
+DIAMETER=35 \
+NITER=250 \
+bash scripts/run_pipeline.sh
+```
 
-In Fiji GUI:
+## E) Outputs
+
+- `masks/*_cp_masks.tif` (label masks)
+- `outlines/*_outlines_cp_masks.png`
+- `flows/*_flows_cp_masks.tif`
+- `counts_from_labels.csv`
+
+`*_dP_cp_masks.tif` files are removed automatically.
+
+## F) Batch counting in Fiji from flows (optional)
+
+In Fiji:
 1. `Plugins -> Macros -> Run...`
 2. Open `fiji/batch_count_flows.ijm`
-3. Pick flow input folder (`img_cellpose_output/flows`)
-4. Pick output folder + CSV name
-5. Enter minimum particle size (e.g. `20`)
-
-## Step 8: copy results to your Mac external drive
-
-Run this on your Mac terminal:
-
-```bash
-rsync -avh --progress \
-  <nus_user>@<vanda_login_host>:/home/svu/<nus_user>/cellpose_segmentation/img_cellpose_output/ \
-  "/Volumes/ext/J/cell_seg/"
-```
-
-Use your real Vanda login host (the same host you SSH into), not internal names like `stdct-login-01`.
+3. Pick `flows` folder
+4. Pick output CSV path
+5. Enter min particle size

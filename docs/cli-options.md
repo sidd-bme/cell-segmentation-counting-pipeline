@@ -1,61 +1,59 @@
 # CLI Options
 
-This page summarizes the environment variables used by the scripts.
-
 ## Main command
 
 ```bash
 INPUT_DIR=/path/to/images \
 OUTPUT_DIR=/path/to/output \
-bash scripts/run_pipeline_interactive_gpu.sh
+bash scripts/run_pipeline.sh
 ```
 
-## `run_pipeline_interactive_gpu.sh`
+## `run_pipeline.sh` (recommended)
 
-These are the common knobs for most users.
-
-- `INPUT_DIR` (default: `./img`): input image folder
-- `OUTPUT_DIR` (default: `./img_cellpose_output`): output root folder
-- `RESIZED_DIR` (default: `./img_resized_1000`): temporary resized images
-- `MAX_DIM` (default: `1000`): longest image side before segmentation
-- `DIAMETER` (default: `35`): expected object diameter in pixels
-- `FLOW_THRESHOLD` (default: `0.4`): stricter flow consistency when higher
-- `CELLPROB_THRESHOLD` (default: `0`): lower values detect more cells
-- `MIN_SIZE` (default: `20`): remove tiny objects smaller than this area
-- `NITER` (default: `250`): flow integration iterations
-- `NORM_PERCENTILE` (default: `1:99`): intensity normalization range
-- `BATCH_SIZE` (default: `8`): inference batch size
-- `GPU_DEVICE` (default: `0`): CUDA device index
-- `CLEAN_OUTPUT` (default: `1`): clear output folder before run
-- `CLEAN_RESIZED` (default: `1`): clear resized folder before run
-- `CELLPOSE_ENV` (default: `cellpose-sam`): conda environment name
+- `INPUT_DIR` default: `./img`
+- `OUTPUT_DIR` default: `./img_cellpose_output`
+- `RESIZED_DIR` default: `./img_resized_1000`
+- `MAX_DIM` default: `1000`
+- `DIAMETER` default: `35`
+- `FLOW_THRESHOLD` default: `0.4`
+- `CELLPROB_THRESHOLD` default: `0`
+- `MIN_SIZE` default: `20`
+- `NITER` default: `250`
+- `NORM_PERCENTILE` default: `1:99`
+- `BATCH_SIZE` default: `8`
+- `GPU_DEVICE` default: `0`
+- `USE_GPU` default: `auto` (`1`, `0`, or `auto`)
+- `CLEAN_OUTPUT` default: `1`
+- `CLEAN_RESIZED` default: `1`
+- `CELLPOSE_ENV` default: `cellpose-sam`
+- `AUTO_ACTIVATE_ENV` default: `1`
 
 Example:
 
 ```bash
-INPUT_DIR=/home/svu/e1520578/cellpose_segmentation/img \
-OUTPUT_DIR=/home/svu/e1520578/cellpose_segmentation/img_cellpose_output \
-MAX_DIM=1000 FLOW_THRESHOLD=0.4 CELLPROB_THRESHOLD=0 NITER=250 \
-bash scripts/run_pipeline_interactive_gpu.sh
+INPUT_DIR=/data/img \
+OUTPUT_DIR=/data/out \
+FLOW_THRESHOLD=0.4 CELLPROB_THRESHOLD=0 DIAMETER=35 NITER=250 \
+USE_GPU=auto \
+bash scripts/run_pipeline.sh
 ```
 
-## Advanced command: `run_cellpose.sh`
+## `run_cellpose.sh` (advanced)
 
-Use this when you want full control of Cellpose CLI behavior.
+Use when you need direct Cellpose output control.
 
-- `MODEL` (default: `cpsam`)
-- `USE_GPU` (default: `1`)
-- `ONLY_OUTLINES_AND_FLOWS` (default: `1`)
+- `MODEL` default: `cpsam`
+- `ONLY_OUTLINES_AND_FLOWS` default: `1`
 - `SAVE_TIF`, `SAVE_PNG`, `SAVE_OUTLINES`, `SAVE_FLOWS`, `IN_FOLDERS`, `NO_NPY`
-- `DROP_DP_FLOWS` (default: `1`): deletes `*_dP_cp_masks.tif`
-- `IMG_FILTER`: Cellpose suffix filter (do not set this to `.jpg`/`.png`)
-- `EXTRA_ARGS`: extra raw Cellpose CLI args
+- `DROP_DP_FLOWS` default: `1` (deletes `*_dP_cp_masks.tif`)
+- `IMG_FILTER`: Cellpose suffix filter (do not use `.jpg` / `.png` as extension)
+- `EXTRA_ARGS`: raw additional cellpose CLI args
 
-Save masks + outlines + flows (clean, no dP files):
+Save masks + outlines + flows with clean flow folder:
 
 ```bash
-INPUT_DIR=/path/to/images \
-OUTPUT_DIR=/path/to/output \
+INPUT_DIR=/data/img \
+OUTPUT_DIR=/data/out \
 ONLY_OUTLINES_AND_FLOWS=0 \
 SAVE_TIF=1 SAVE_PNG=0 SAVE_OUTLINES=1 SAVE_FLOWS=1 IN_FOLDERS=1 \
 DROP_DP_FLOWS=1 \

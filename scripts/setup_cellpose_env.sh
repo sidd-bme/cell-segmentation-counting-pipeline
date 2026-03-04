@@ -3,7 +3,41 @@ set -euo pipefail
 
 ENV_NAME="${ENV_NAME:-cellpose-sam}"
 PYTHON_VERSION="${PYTHON_VERSION:-3.10}"
-INSTALL_SOURCE="${INSTALL_SOURCE:-github}" # github|pypi
+INSTALL_SOURCE="${INSTALL_SOURCE:-pypi}" # github|pypi
+CONDA_HOME="${CONDA_HOME:-$HOME/miniconda3}"
+AUTO_INSTALL_CONDA="${AUTO_INSTALL_CONDA:-1}"
+
+install_miniconda() {
+  local os arch installer url tmp_file
+  os="$(uname -s)"
+  arch="$(uname -m)"
+
+  case "${os}:${arch}" in
+    Linux:x86_64) installer="Miniconda3-latest-Linux-x86_64.sh" ;;
+    Linux:aarch64|Linux:arm64) installer="Miniconda3-latest-Linux-aarch64.sh" ;;
+    Darwin:x86_64) installer="Miniconda3-latest-MacOSX-x86_64.sh" ;;
+    Darwin:arm64) installer="Miniconda3-latest-MacOSX-arm64.sh" ;;
+    *)
+      echo "Unsupported platform for automatic Miniconda install: ${os} ${arch}" >&2
+      return 1
+      ;;
+  esac
+
+  url="https://repo.anaconda.com/miniconda/${installer}"
+  tmp_file="$(mktemp)"
+
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "${url}" -o "${tmp_file}"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO "${tmp_file}" "${url}"
+  else
+    echo "Need curl or wget to auto-install Miniconda." >&2
+    return 1
+  fi
+
+  bash "${tmp_file}" -b -p "${CONDA_HOME}"
+  rm -f "${tmp_file}"
+}
 
 usage() {
   cat <<'EOF'
@@ -12,11 +46,11 @@ Usage: bash scripts/setup_cellpose_env.sh [options]
 Options:
   -e, --env NAME          Conda env name (default: cellpose-sam)
   -p, --python VERSION    Python version (default: 3.10)
-      --source SOURCE     Install source: github or pypi (default: github)
+      --source SOURCE     Install source: github or pypi (default: pypi)
   -h, --help              Show help
 
 Environment variable overrides:
-  ENV_NAME, PYTHON_VERSION, INSTALL_SOURCE
+  ENV_NAME, PYTHON_VERSION, INSTALL_SOURCE, CONDA_HOME, AUTO_INSTALL_CONDA
 EOF
 }
 
@@ -47,13 +81,17 @@ while [[ $# -gt 0 ]]; do
 done
 
 if ! command -v conda >/dev/null 2>&1; then
-  echo "conda not found in PATH. Load/init conda first." >&2
-  exit 1
-fi
-
-if ! command -v git >/dev/null 2>&1; then
-  echo "git not found in PATH." >&2
-  exit 1
+  if [[ -x "${CONDA_HOME}/bin/conda" ]]; then
+    export PATH="${CONDA_HOME}/bin:${PATH}"
+  else
+    if [[ "${AUTO_INSTALL_CONDA}" != "1" ]]; then
+      echo "conda not found and AUTO_INSTALL_CONDA=0." >&2
+      exit 1
+    fi
+    echo "conda not found. Installing Miniconda to ${CONDA_HOME} ..."
+    install_miniconda
+    export PATH="${CONDA_HOME}/bin:${PATH}"
+  fi
 fi
 
 CONDA_BASE="$(conda info --base)"
@@ -75,6 +113,10 @@ python -m pip install --upgrade pip setuptools wheel
 
 case "${INSTALL_SOURCE}" in
   github)
+    if ! command -v git >/dev/null 2>&1; then
+      echo "git is required for INSTALL_SOURCE=github." >&2
+      exit 1
+    fi
     python -m pip install --upgrade "git+https://github.com/MouseLand/cellpose.git"
     ;;
   pypi)
@@ -85,6 +127,9 @@ case "${INSTALL_SOURCE}" in
     exit 1
     ;;
 esac
+
+# Explicitly ensure runtime deps used by helper scripts are available.
+python -m pip install --upgrade numpy pillow tifffile
 
 python - <<'PY'
 import platform

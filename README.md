@@ -1,50 +1,43 @@
 # Cell Segmentation and Counting Pipeline (Cellpose-SAM + Fiji)
 
-Minimal, interactive-node workflow for NUS Vanda:
-- segment brightfield cell images with Cellpose-SAM
-- save clean outputs (no `*_dP_cp_masks.tif` files)
-- count cells from label masks (CSV)
-- optionally count from Cellpose flow images in Fiji
+Simple, reproducible pipeline for:
+- Cellpose-SAM segmentation
+- clean outputs (`*_flows_cp_masks.tif` kept, `*_dP_cp_masks.tif` removed)
+- batch cell counting from label masks
+- optional Fiji batch counting from flow images
 
-## 1) One-time setup (login node)
+This repo supports both:
+- NUS Vanda HPC (interactive GPU node)
+- local machine (Mac/Linux, CPU or GPU)
+
+## Quick Start (Clone + Run)
+
+### 1) Clone
 
 ```bash
-cd /home/svu/e1520578/cellpose_segmentation
+git clone <YOUR_REPO_URL>
+cd cellpose_segmentation
+```
+
+### 2) One-time setup (auto-installs Miniconda if missing)
+
+```bash
 bash scripts/setup_cellpose_env.sh
 ```
 
-## 2) Start an interactive GPU session (login node)
+No manual dependency installation is required.
+
+### 3) Run pipeline
 
 ```bash
-bash scripts/request_interactive_gpu.sh
+INPUT_DIR=/absolute/path/to/input_images \
+OUTPUT_DIR=/absolute/path/to/output_folder \
+bash scripts/run_pipeline.sh
 ```
 
-If needed, customize resources:
+That is the main command for most users.
 
-```bash
-SELECT='1:ncpus=16:mem=120gb:ngpus=1' WALLTIME=04:00:00 bash scripts/request_interactive_gpu.sh
-```
-
-## 3) Run segmentation + counting (inside interactive GPU shell)
-
-```bash
-cd /home/svu/e1520578/cellpose_segmentation
-source ~/miniconda3/etc/profile.d/conda.sh
-conda activate cellpose-sam
-
-INPUT_DIR=/home/svu/e1520578/cellpose_segmentation/img \
-OUTPUT_DIR=/home/svu/e1520578/cellpose_segmentation/img_cellpose_output \
-bash scripts/run_pipeline_interactive_gpu.sh
-```
-
-This single command does:
-1. resize images to max side `1000`
-2. run Cellpose-SAM with tuned defaults
-3. save masks + outlines + flows
-4. remove `*_dP_cp_masks.tif` files automatically
-5. write `counts_from_labels.csv`
-
-## Default run values
+## Default segmentation values (current tuned defaults)
 
 - `MODEL=cpsam`
 - `MAX_DIM=1000`
@@ -55,45 +48,91 @@ This single command does:
 - `NITER=250`
 - `NORM_PERCENTILE=1:99`
 
-## 4) Tune thresholds (optional)
+## Output files
 
-Use the same command but override values:
+After each run:
+- `masks/*_cp_masks.tif` (label masks; best for quantitative counting)
+- `outlines/*_outlines_cp_masks.png`
+- `flows/*_flows_cp_masks.tif`
+- `counts_from_labels.csv`
+
+`*_dP_cp_masks.tif` files are removed automatically for cleaner outputs.
+
+## NUS Vanda HPC (interactive GPU)
+
+### 1) Login node
 
 ```bash
+cd /home/svu/e1520578/cellpose_segmentation
+bash scripts/setup_cellpose_env.sh
+bash scripts/request_interactive_gpu.sh
+```
+
+### 2) After interactive shell starts
+
+```bash
+cd /home/svu/e1520578/cellpose_segmentation
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate cellpose-sam
+
 INPUT_DIR=/home/svu/e1520578/cellpose_segmentation/img \
 OUTPUT_DIR=/home/svu/e1520578/cellpose_segmentation/img_cellpose_output \
+USE_GPU=1 \
+bash scripts/run_pipeline.sh
+```
+
+Optional larger request:
+
+```bash
+SELECT='1:ncpus=16:mem=120gb:ngpus=1' WALLTIME=04:00:00 bash scripts/request_interactive_gpu.sh
+```
+
+## Local machine (Mac/Linux)
+
+### CPU mode (works everywhere)
+
+```bash
+INPUT_DIR=/absolute/path/to/input_images \
+OUTPUT_DIR=/absolute/path/to/output_folder \
+USE_GPU=0 \
+bash scripts/run_pipeline.sh
+```
+
+### Auto GPU detect (if NVIDIA GPU available)
+
+```bash
+INPUT_DIR=/absolute/path/to/input_images \
+OUTPUT_DIR=/absolute/path/to/output_folder \
+USE_GPU=auto \
+bash scripts/run_pipeline.sh
+```
+
+## Tune thresholds
+
+```bash
+INPUT_DIR=/absolute/path/to/input_images \
+OUTPUT_DIR=/absolute/path/to/output_folder \
 FLOW_THRESHOLD=0.3 \
 CELLPROB_THRESHOLD=-1 \
 DIAMETER=30 \
 NITER=300 \
-bash scripts/run_pipeline_interactive_gpu.sh
+bash scripts/run_pipeline.sh
 ```
 
-More options are documented in [CLI Options](docs/cli-options.md).
+More options: [CLI Options](docs/cli-options.md)
 
-## 5) Output structure
-
-After a run:
-
-- `img_cellpose_output/masks/*_cp_masks.tif` (label masks for quantitative counting)
-- `img_cellpose_output/outlines/*_outlines_cp_masks.png`
-- `img_cellpose_output/flows/*_flows_cp_masks.tif` (RGB flow images only)
-- `img_cellpose_output/counts_from_labels.csv`
-
-## 6) Batch counting in Fiji from flow images (optional)
+## Batch counting in Fiji from flow images (optional)
 
 In Fiji GUI:
 1. `Plugins -> Macros -> Run...`
 2. Open `fiji/batch_count_flows.ijm`
-3. Select input folder: `.../img_cellpose_output/flows`
-4. Select output folder + CSV name
-5. Set minimum particle size (e.g. `20`)
+3. Choose input folder (`.../flows`)
+4. Choose output folder + CSV name
+5. Set minimum particle size (e.g. `0` or `20`)
 
-The macro runs: 8-bit -> auto-threshold -> apply -> Analyze Particles for each flow image.
+The macro runs: 8-bit -> auto-threshold -> convert mask -> analyze particles.
 
-## 7) Copy outputs to your external drive (run on your Mac)
-
-Use the same hostname you use for SSH to Vanda (not internal node names like `stdct-login-01`).
+## Copy outputs to external drive (run on your Mac)
 
 ```bash
 rsync -avh --progress \
@@ -101,8 +140,24 @@ rsync -avh --progress \
   "/Volumes/ext/J/cell_seg/"
 ```
 
-Example login host format depends on your access setup (ask NUS IT if unsure).
+Use the same Vanda login hostname you use for SSH (not internal node names like `stdct-login-01`).
 
-## Credits
+## Credits and Attribution
 
-See [CREDITS.md](CREDITS.md) for attribution and citation links.
+### Cellpose / Cellpose-SAM
+
+This pipeline wraps the Cellpose CLI and models.
+
+- Project: https://github.com/MouseLand/cellpose
+- Documentation: https://cellpose.readthedocs.io/
+
+Please cite the Cellpose papers when publishing results.
+
+### Fiji / ImageJ
+
+Fiji is used for optional flow-based particle counting.
+
+- Fiji: https://fiji.sc/
+- ImageJ: https://imagej.net/
+
+Please cite Fiji/ImageJ according to their official guidance when reporting analyses.
