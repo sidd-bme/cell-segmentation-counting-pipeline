@@ -1,0 +1,9 @@
+logs/
+data/
+upstream_cellpose/
+img/
+img_resized_1000/
+img_cellpose_output/
+*.log
+*.npy
+.DS_Store
